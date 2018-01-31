@@ -65,7 +65,7 @@ class InfraRedRuntime(object):
         self._screen = pygame.display.set_mode((self._kinect.depth_frame_desc.Width, self._kinect.depth_frame_desc.Height),
                                                 pygame.HWSURFACE|pygame.DOUBLEBUF|pygame.RESIZABLE, 32)
 
-        self.pport = parallel.ParallelPorts(address="0xC010")
+        self.pport = parallel.ParallelPort(address="0xC010")
 
         pygame.display.set_caption("Kinect for Windows v2 Depth")
 

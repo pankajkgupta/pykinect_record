@@ -1,3 +1,11 @@
+################################################################################
+# Python script to record KinectV2 depth sensors.
+# The code sends specific triggers on the parallel port to signal the recording status
+# Reads config.ini for parameters for recording
+# Author(s)	: Pankaj Kumar Gupta
+# email		: pankajkmrgupta@gmail.com
+################################################################################
+
 import ctypes
 import _ctypes
 import pygame

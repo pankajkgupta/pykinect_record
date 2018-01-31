@@ -1,12 +1,12 @@
-from pykinect2 import PyKinectV2
-from pykinect2.PyKinectV2 import *
-from pykinect2 import PyKinectRuntime
-
 import ctypes
 import _ctypes
 import pygame
 import sys
 import numpy as np
+
+from pykinect2 import PyKinectV2
+from pykinect2.PyKinectV2 import *
+from pykinect2 import PyKinectRuntime
 
 from psychopy import parallel
 from ConfigParser import SafeConfigParser
@@ -16,14 +16,18 @@ if sys.hexversion >= 0x03000000:
 else:
     import thread
 
+from datetime import datetime
+import os
+
 configSec = 'DEFAULT'
 config = SafeConfigParser()
 config.read('config.ini')
 EPOCH_LEN = int(config.get(configSec, 'EPOCH_LEN'))
-dataPath = config.get(configSec, 'dataPath')
+
 trigWidth = int(config.get(configSec, 'trigWidth'))
 T_SESSION_START = int(config.get(configSec, 'T_SESSION_START'))
-T_VID_START = int(config.get(configSec, 'T_VID_START'))
+T_START = int(config.get(configSec, 'T_START'))
+T_SESSION_END = int(config.get(configSec, 'T_SESSION_END'))
 T_INTERVAL = int(config.get(configSec, 'T_INTERVAL'))
 T_BG = int(config.get(configSec, 'T_BG'))
 n_epoch = int(config.get(configSec, 'N_EPOCH'))
@@ -65,7 +69,7 @@ class InfraRedRuntime(object):
         self._screen = pygame.display.set_mode((self._kinect.depth_frame_desc.Width, self._kinect.depth_frame_desc.Height),
                                                 pygame.HWSURFACE|pygame.DOUBLEBUF|pygame.RESIZABLE, 32)
 
-        self.pport = parallel.ParallelPort(address="0xC010")
+        self.pport = parallel.ParallelPort(address="0xCFF8")
 
         pygame.display.set_caption("Kinect for Windows v2 Depth")
 
@@ -88,15 +92,33 @@ class InfraRedRuntime(object):
         address = self._kinect.surface_as_array(target_surface.get_buffer())
         ctypes.memmove(address, frame8bit.ctypes.data, frame8bit.size)
         del address
-        print frame
         target_surface.unlock()
 
     def run(self):
+
+        dataPath = config.get(configSec, 'dataPath')
+        t = datetime.now()
+        dataPath = dataPath + str(t.year) + format(t.month, '02d') + format(t.day, '02d') + \
+                   format(t.hour, '02d') + format(t.minute, '02d') + format(t.second, '02d')
+        if not os.path.exists(dataPath):
+            print "Creating data directory: %s" % dataPath
+            os.makedirs(dataPath)
+
+        # save the configuration used
+        with open(dataPath + '/config.ini', 'w') as f:
+            config.write(f)
+
+        iDepthFrame = 0
+        tr_epoch = 1
+        t_start = datetime.now()
+        # Start of the session
+        self.send_trigger(T_SESSION_START)
         # -------- Main Program Loop -----------
         while not self._done:
             # --- Main event loop
             for event in pygame.event.get(): # User did something
                 if event.type == pygame.QUIT: # If user clicked close
+                    self.send_trigger(T_SESSION_END)
                     self._done = True # Flag that we are done so we exit this loop
 
                 elif event.type == pygame.VIDEORESIZE: # window resized
@@ -106,10 +128,24 @@ class InfraRedRuntime(object):
 
             # --- Getting frames and drawing  
             if self._kinect.has_new_depth_frame():
+
+                iDepthFrame += 1
+
+                if tr_epoch == n_epoch:
+                    tr_epoch = 1
+                if iDepthFrame % T_INTERVAL == 0:
+                    print "Send frame: " + str(iDepthFrame)
+                    self.send_trigger(tr_epoch)
+                    tr_epoch += 1
+                else:
+                    self.send_trigger(T_BG)
+
                 frame = self._kinect.get_last_depth_frame()
                 self.draw_depth_frame(frame, self._frame_surface)
-                pygame.image.save(self._frame_surface, 'aa.png')
+                fName = dataPath + os.sep + "depth_{:10}.png".format(iDepthFrame)
+                pygame.image.save(self._frame_surface, fName)
                 frame = None
+                print "Frame : {}	Time : {} ...".format(iDepthFrame, datetime.now() - t_start)
 
             self._screen.blit(self._frame_surface, (0,0))
             pygame.display.update()

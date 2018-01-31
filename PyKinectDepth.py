@@ -122,47 +122,50 @@ class InfraRedRuntime(object):
         # Start of the session
         self.send_trigger(T_SESSION_START)
         # -------- Main Program Loop -----------
-        while not self._done:
-            # --- Main event loop
-            for event in pygame.event.get(): # User did something
-                if event.type == pygame.QUIT: # If user clicked close
-                    self.send_trigger(T_SESSION_END)
-                    self._done = True # Flag that we are done so we exit this loop
+        logFileName = dataPath + os.sep + "depth_times.txt"
+        with open(logFileName, 'w') as logFile:
+            while not self._done:
+                # --- Main event loop
+                for event in pygame.event.get(): # User did something
+                    if event.type == pygame.QUIT: # If user clicked close
+                        self.send_trigger(T_SESSION_END)
+                        self._done = True # Flag that we are done so we exit this loop
 
-                elif event.type == pygame.VIDEORESIZE: # window resized
-                    self._screen = pygame.display.set_mode(event.dict['size'], 
-                                                pygame.HWSURFACE|pygame.DOUBLEBUF|pygame.RESIZABLE, 32)
-                    
+                    elif event.type == pygame.VIDEORESIZE: # window resized
+                        self._screen = pygame.display.set_mode(event.dict['size'], 
+                                                    pygame.HWSURFACE|pygame.DOUBLEBUF|pygame.RESIZABLE, 32)
 
-            # --- Getting frames and drawing  
-            if self._kinect.has_new_depth_frame():
 
-                iDepthFrame += 1
+                # --- Getting frames and drawing  
+                if self._kinect.has_new_depth_frame():
+                    sttime = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                    iDepthFrame += 1
 
-                if tr_epoch == n_epoch:
-                    tr_epoch = 1
-                if iDepthFrame % T_INTERVAL == 0:
-                    print "Send frame: " + str(iDepthFrame)
-                    self.send_trigger(tr_epoch)
-                    tr_epoch += 1
-                else:
-                    self.send_trigger(T_BG)
+                    if tr_epoch == n_epoch:
+                        tr_epoch = 1
+                    if iDepthFrame % T_INTERVAL == 0:
+                        print "Send frame: " + str(iDepthFrame)
+                        self.send_trigger(tr_epoch)
+                        tr_epoch += 1
+                    else:
+                        self.send_trigger(T_BG)
 
-                frame = self._kinect.get_last_depth_frame()
-                self.draw_depth_frame(frame, self._frame_surface)
-                fName = dataPath + os.sep + "depth_{:10}.png".format(iDepthFrame)
-                pygame.image.save(self._frame_surface, fName)
-                frame = None
-                print "Frame : {}	Time : {} ...".format(iDepthFrame, datetime.now() - t_start)
+                    frame = self._kinect.get_last_depth_frame()
+                    self.draw_depth_frame(frame, self._frame_surface)
+                    fName = dataPath + os.sep + "depth_{:10}.png".format(iDepthFrame)
+                    pygame.image.save(self._frame_surface, fName)
+                    logFile.write(str(iDepthFrame) + '\t' + sttime + "\n")
+                    frame = None
+                    print "Frame : {}	Time : {} ...".format(iDepthFrame, datetime.now() - t_start)
 
-            self._screen.blit(self._frame_surface, (0,0))
-            pygame.display.update()
+                self._screen.blit(self._frame_surface, (0,0))
+                pygame.display.update()
 
-            # --- Go ahead and update the screen with what we've drawn.
-            pygame.display.flip()
+                # --- Go ahead and update the screen with what we've drawn.
+                pygame.display.flip()
 
-            # --- Limit to 60 frames per second
-            self._clock.tick(60)
+                # --- Limit to 60 frames per second
+                self._clock.tick(60)
 
         # Close our Kinect sensor, close the window and quit.
         self._kinect.close()

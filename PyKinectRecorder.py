@@ -1,5 +1,5 @@
 ################################################################################
-# Python script to record KinectV2 depth sensors.
+# Python script to record KinectV2 infrared sensors.
 # The code sends specific triggers on the parallel port to signal the recording status
 # Reads config.ini for parameters for recording
 # Author(s)	: Pankaj Kumar Gupta
@@ -78,7 +78,7 @@ class InfraRedRuntime(object):
 
         self.pport = parallel.ParallelPort(address="0xCFF8")
 
-        pygame.display.set_caption("Kinect for Windows v2 Depth")
+        pygame.display.set_caption("Kinect for Windows v2 Infrared")
 
     def send_trigger(self, code):
         global trigWidth
@@ -90,7 +90,7 @@ class InfraRedRuntime(object):
             self.pport.setData(ordered_code)
 
 
-    def draw_depth_frame(self, frame, target_surface):
+    def draw_infrared_frame(self, frame, target_surface):
         if frame is None:  # some usb hub do not provide the infrared image. it works with Kinect studio though
             return
         target_surface.lock()
@@ -115,13 +115,13 @@ class InfraRedRuntime(object):
         with open(dataPath + '/config.ini', 'w') as f:
             config.write(f)
 
-        iDepthFrame = 0
+        iInfraredFrame = 0
         tr_epoch = 1
         t_start = datetime.now()
         # Start of the session
         self.send_trigger(T_SESSION_START)
         # -------- Main Program Loop -----------
-        logFileName = dataPath + os.sep + "depth_times.txt"
+        logFileName = dataPath + os.sep + "infrared_times.txt"
         with open(logFileName, 'w') as logFile:
             while not self._done:
                 # --- Main event loop
@@ -138,24 +138,24 @@ class InfraRedRuntime(object):
                 # --- Getting frames and drawing  
                 if self._kinect.has_new_infrared_frame():
                     sttime = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                    iDepthFrame += 1
+                    iInfraredFrame += 1
 
                     if tr_epoch == n_epoch:
                         tr_epoch = 1
-                    if iDepthFrame % T_INTERVAL == 0:
-                        print "Send frame: " + str(iDepthFrame)
+                    if iInfraredFrame % T_INTERVAL == 0:
+                        print "Send frame: " + str(iInfraredFrame)
                         self.send_trigger(tr_epoch)
                         tr_epoch += 1
                     else:
                         self.send_trigger(T_BG)
 
                     frame = self._kinect.get_last_infrared_frame()
-                    self.draw_depth_frame(frame, self._frame_surface)
-                    fName = dataPath + os.sep + "depth_{:10}.png".format(iDepthFrame)
+                    self.draw_infrared_frame(frame, self._frame_surface)
+                    fName = dataPath + os.sep + "ir_{:010}.png".format(iInfraredFrame)
                     pygame.image.save(self._frame_surface, fName)
-                    logFile.write(str(iDepthFrame) + '\t' + sttime + "\n")
+                    logFile.write("{:010}".format(iInfraredFrame) + '\t' + sttime + "\n")
                     frame = None
-                    print "Frame : {}	Time : {} ...".format(iDepthFrame, datetime.now() - t_start)
+                    print "Frame : {}	Time : {} ...".format(iInfraredFrame, datetime.now() - t_start)
 
                 self._screen.blit(self._frame_surface, (0,0))
                 pygame.display.update()

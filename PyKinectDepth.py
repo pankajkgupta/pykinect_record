@@ -34,7 +34,6 @@ EPOCH_LEN = int(config.get(configSec, 'EPOCH_LEN'))
 
 trigWidth = int(config.get(configSec, 'trigWidth'))
 T_SESSION_START = int(config.get(configSec, 'T_SESSION_START'))
-T_START = int(config.get(configSec, 'T_START'))
 T_SESSION_END = int(config.get(configSec, 'T_SESSION_END'))
 T_INTERVAL = int(config.get(configSec, 'T_INTERVAL'))
 T_BG = int(config.get(configSec, 'T_BG'))

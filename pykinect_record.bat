@@ -1,4 +1,4 @@
 ECHO ON
 REM A batch script to execute a Python script
-python PyKinectDepth.py
+python PyKinectRecorder.py
 REM End of recording

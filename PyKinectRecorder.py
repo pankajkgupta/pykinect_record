@@ -26,6 +26,7 @@ else:
 
 from datetime import datetime
 import os
+import cv2
 
 configSec = 'DEFAULT'
 config = SafeConfigParser()
@@ -52,33 +53,20 @@ SKELETON_COLORS = [pygame.color.THECOLORS["red"],
 
 class InfraRedRuntime(object):
     def __init__(self):
-        pygame.init()
-
-        # Used to manage how fast the screen updates
-        self._clock = pygame.time.Clock()
 
         # Loop until the user clicks the close button.
         self._done = False
 
-        # Used to manage how fast the screen updates
-        self._clock = pygame.time.Clock()
-
         # Kinect runtime object
         self._kinect = PyKinectRuntime.PyKinectRuntime(PyKinectV2.FrameSourceTypes_Infrared)
 
-        # back buffer surface for getting Kinect infrared frames, 8bit grey, width and height equal to the Kinect color frame size
-        self._frame_surface = pygame.Surface((self._kinect.infrared_frame_desc.Width, self._kinect.infrared_frame_desc.Height), 0, 24)
-        # here we will store skeleton data 
+        # here we will store skeleton data
         self._bodies = None
-        
-        # Set the width and height of the screen [width, height]
-        self._infoObject = pygame.display.Info()
-        self._screen = pygame.display.set_mode((self._kinect.infrared_frame_desc.Width, self._kinect.infrared_frame_desc.Height),
-                                                pygame.HWSURFACE|pygame.DOUBLEBUF|pygame.RESIZABLE, 32)
 
         self.pport = parallel.ParallelPort(address="0xCFF8")
 
-        pygame.display.set_caption("Kinect for Windows v2 Infrared")
+        # pygame.display.set_caption("Kinect for Windows v2 Infrared")
+        cv2.namedWindow('video')
 
     def send_trigger(self, code):
         global trigWidth
@@ -125,14 +113,6 @@ class InfraRedRuntime(object):
         with open(logFileName, 'w') as logFile:
             while not self._done:
                 # --- Main event loop
-                for event in pygame.event.get(): # User did something
-                    if event.type == pygame.QUIT: # If user clicked close
-                        self.send_trigger(T_SESSION_END)
-                        self._done = True # Flag that we are done so we exit this loop
-
-                    elif event.type == pygame.VIDEORESIZE: # window resized
-                        self._screen = pygame.display.set_mode(event.dict['size'], 
-                                                    pygame.HWSURFACE|pygame.DOUBLEBUF|pygame.RESIZABLE, 32)
 
 
                 # --- Getting frames and drawing  
@@ -150,25 +130,27 @@ class InfraRedRuntime(object):
                         self.send_trigger(T_BG)
 
                     frame = self._kinect.get_last_infrared_frame()
-                    self.draw_infrared_frame(frame, self._frame_surface)
+                    # self.draw_infrared_frame(frame, self._frame_surface)
+                    reshapeframe = frame.reshape(self._kinect.infrared_frame_desc.Height, self._kinect.infrared_frame_desc.Width)
+
+                    cv2.imshow('video', reshapeframe)
+
                     fName = dataPath + os.sep + "ir_{:010}.png".format(iInfraredFrame)
-                    pygame.image.save(self._frame_surface, fName)
+                    cv2.imwrite(fName, reshapeframe)
+                    # pygame.image.save(self._frame_surface, fName)
                     logFile.write("{:010}".format(iInfraredFrame) + '\t' + sttime + "\n")
                     frame = None
                     print "Frame : {}	Time : {} ...".format(iInfraredFrame, datetime.now() - t_start)
+                    status = cv2.waitKey(5)
+                    if status == 27:
+                        break
 
-                self._screen.blit(self._frame_surface, (0,0))
-                pygame.display.update()
-
-                # --- Go ahead and update the screen with what we've drawn.
-                pygame.display.flip()
 
                 # --- Limit to 60 frames per second
-                self._clock.tick(60)
+                # self._clock.tick(60)
 
         # Close our Kinect sensor, close the window and quit.
         self._kinect.close()
-        pygame.quit()
 
 
 __main__ = "Kinect v2 InfraRed"

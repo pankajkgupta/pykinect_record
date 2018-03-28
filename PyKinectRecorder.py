@@ -66,7 +66,6 @@ class InfraRedRuntime(object):
         self.pport = parallel.ParallelPort(address="0xCFF8")
 
         # pygame.display.set_caption("Kinect for Windows v2 Infrared")
-        cv2.namedWindow('video')
 
     def send_trigger(self, code):
         global trigWidth
@@ -133,10 +132,11 @@ class InfraRedRuntime(object):
                     # self.draw_infrared_frame(frame, self._frame_surface)
                     reshapeframe = frame.reshape(self._kinect.infrared_frame_desc.Height, self._kinect.infrared_frame_desc.Width)
 
-                    cv2.imshow('video', reshapeframe)
+                    # cv2.imshow('video', reshapeframe)
 
-                    fName = dataPath + os.sep + "ir_{:010}.png".format(iInfraredFrame)
-                    cv2.imwrite(fName, reshapeframe)
+                    fName = dataPath + os.sep + "ir_{:010}.npy".format(iInfraredFrame)
+                    np.save(fName, reshapeframe)
+                    # cv2.imwrite(fName, reshapeframe)
                     # pygame.image.save(self._frame_surface, fName)
                     logFile.write("{:010}".format(iInfraredFrame) + '\t' + sttime + "\n")
                     frame = None
